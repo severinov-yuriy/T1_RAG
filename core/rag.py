@@ -33,6 +33,8 @@ class RAGPipeline:
         # Поиск ближайших соседей
         results = self.vector_store.search(query_vector, top_k)
 
+        print([(idx, _) for idx, _ in results])
+        print([idx for idx in self.vector_store.metadata])
         # Извлечение метаданных из базы данных
         chunk_ids = [self.vector_store.metadata[idx] for idx, _ in results]
         context_chunks = fetch_chunks_by_ids(chunk_ids, self.db_path)
@@ -69,7 +71,6 @@ class RAGPipeline:
         """
         # Извлечение контекста
         context_chunks = self.retrieve_context(query, top_k)
-
         # Формирование промта
         prompt = self.generate_prompt(query, context_chunks)
         print(prompt)

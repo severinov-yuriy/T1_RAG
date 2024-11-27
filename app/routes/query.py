@@ -23,7 +23,7 @@ class QueryRequest(BaseModel):
     api_key: str
     api_url: str = None  # Для кастомных моделей
     model_name: str = "meta-llama/llama-3.1-70b-instruct:free"
-    top_k: int = 10
+    top_k: int = 1
 
 
 @router.post("/query/")

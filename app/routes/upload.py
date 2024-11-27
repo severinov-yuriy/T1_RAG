@@ -1,6 +1,7 @@
 import os
 from fastapi import APIRouter, UploadFile, HTTPException
 from core.document_processing import process_archive
+from core.vectorization import TextVectorizer
 from core.database import init_database, save_chunks_to_db
 from core.vector_store import VectorStore
 
@@ -28,15 +29,19 @@ async def upload_archive(file: UploadFile):
 
     try:
         # Обрабатываем архив и получаем текстовые кусочки
-        chunks = process_archive(archive_path, max_chunk_size=500)
+        chunks = process_archive(archive_path, output_dir='data/extracted')
 
         # Инициализируем базу данных и сохраняем кусочки
         init_database(DB_PATH)
         save_chunks_to_db(chunks, DB_PATH)
 
+        vectorizer = TextVectorizer()
+        texts = [chunk["chunk_text"] for chunk in chunks]
+        vectors = vectorizer.vectorize(texts)
+
         # Инициализируем векторное хранилище и индексируем кусочки
         vector_store = VectorStore(VECTOR_DIM, VECTOR_STORE_PATH)
-        vector_store.index_chunks(chunks)
+        vector_store.add_vectors(vectors, [chunk["id"] for chunk in chunks])
         vector_store.save_index()
 
         return {"message": "Archive processed successfully", "total_chunks": len(chunks)}
