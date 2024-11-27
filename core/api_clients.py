@@ -47,11 +47,12 @@ class OpenRouterAPIClient(AbstractAPIClient):
 
     def generate(self, prompt: str, model: str = "meta-llama/llama-3.1-70b-instruct:free", **kwargs) -> str:
         from openai import OpenAI
-        response = self.client.chat.completions.create(
+        completion = self.client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}]
         )
-        return response['choices'][0]['message']['content']
+        print(completion)
+        return completion.choices[0].message.content
 
 
 class CustomAPIClient(AbstractAPIClient):

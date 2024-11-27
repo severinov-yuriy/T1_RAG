@@ -14,23 +14,7 @@ class VectorStore:
         """
         self.vector_dim = vector_dim
         self.index_path = index_path
-        self.metadata_db = metadata_db
         self.index = faiss.IndexFlatL2(vector_dim)
-        self._setup_metadata_db()
-
-    def _setup_metadata_db(self) -> None:
-        """
-        Инициализация базы данных для метаданных.
-        """
-        with sqlite3.connect(self.metadata_db) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS metadata (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    file_path TEXT NOT NULL
-                );
-            """)
-            conn.commit()
 
     def add_vectors(self, vectors: List[List[float]], metadata: List[str]) -> None:
         """
@@ -40,21 +24,6 @@ class VectorStore:
         """
         vectors_np = np.array(vectors, dtype="float32")
         self.index.add(vectors_np)
-
-    def get_metadata(self, ids: List[int]) -> List[str]:
-        """
-        Получение метаданных для списка идентификаторов.
-        :param ids: Список идентификаторов векторов.
-        :return: Список метаданных.
-        """
-        with sqlite3.connect(self.metadata_db) as conn:
-            cursor = conn.cursor()
-            placeholders = ",".join("?" for _ in ids)
-
-            query = f"SELECT id, file_path, chunk_text FROM text_chunks WHERE id IN ({placeholders});"
-            cursor.execute(query, ids)
-            rows = cursor.fetchall()
-        return [row[0] for row in rows]
 
     def search(self, query_vector: List[float], top_k: int = 10) -> List[Tuple[int, float, str]]:
         """
@@ -68,7 +37,6 @@ class VectorStore:
 
         # Индексы -1 означают отсутствие результата (FAISS может возвращать -1 при пустом поиске)
         valid_indices = [int(idx) for idx in indices[0] if idx != -1]
-        self.metadata = self.get_metadata(valid_indices)
 
         return [(int(idx), float(dist)) for idx, dist in zip(indices[0], distances[0])]
 
