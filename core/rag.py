@@ -36,7 +36,6 @@ class RAGPipeline:
         # Извлечение метаданных из базы данных
         chunk_ids = [idx for idx, _ in results]
         context_chunks = fetch_chunks_by_ids(chunk_ids, self.db_path)
-        print(context_chunks)
 
         return context_chunks
 
@@ -72,12 +71,11 @@ class RAGPipeline:
         context_chunks = self.retrieve_context(query, top_k)
         # Формирование промта
         prompt = self.generate_prompt(query, context_chunks)
-        print(prompt)
 
         # Получение ответа от модели
         answer = api_client.generate(prompt, **kwargs)
 
-        file_paths = [chunk['file_path'] for chunk in context_chunks]
+        file_paths = {chunk['file_path'] for chunk in context_chunks}
 
         return {
             "query": query,

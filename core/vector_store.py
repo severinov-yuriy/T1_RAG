@@ -14,7 +14,23 @@ class VectorStore:
         """
         self.vector_dim = vector_dim
         self.index_path = index_path
+        self.metadata_db = metadata_db
         self.index = faiss.IndexFlatL2(vector_dim)
+        self._setup_metadata_db()
+
+    def _setup_metadata_db(self) -> None:
+        """
+        Инициализация базы данных для метаданных.
+        """
+        with sqlite3.connect(self.metadata_db) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS metadata (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    file_path TEXT NOT NULL
+                );
+            """)
+            conn.commit()
 
     def add_vectors(self, vectors: List[List[float]], metadata: List[str]) -> None:
         """
@@ -25,6 +41,12 @@ class VectorStore:
         vectors_np = np.array(vectors, dtype="float32")
         self.index.add(vectors_np)
 
+        with sqlite3.connect(self.metadata_db) as conn:
+            cursor = conn.cursor()
+            cursor.executemany("INSERT INTO metadata (file_path) VALUES (?);", [(m,) for m in metadata])
+            conn.commit()
+
+
     def search(self, query_vector: List[float], top_k: int = 10) -> List[Tuple[int, float, str]]:
         """
         Поиск ближайших соседей по вектору.
@@ -34,9 +56,6 @@ class VectorStore:
         """
         query_np = np.array([query_vector], dtype="float32")
         distances, indices = self.index.search(query_np, top_k)
-
-        # Индексы -1 означают отсутствие результата (FAISS может возвращать -1 при пустом поиске)
-        valid_indices = [int(idx) for idx in indices[0] if idx != -1]
 
         return [(int(idx), float(dist)) for idx, dist in zip(indices[0], distances[0])]
 
